@@ -112,21 +112,21 @@
                 <div>
                     <label class="block text-base font-bold text-gray-600 mb-2">預計完成時間 (時 : 分 : 秒)</label>
                     <div class="flex items-center gap-2">
-                        <!-- 時 -->
+                        <!---->
                         <div class="flex-1 relative">
                             <input type="number" id="m-hour" required min="0" max="23" placeholder="00"
                                 class="w-full px-2 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-400 focus:bg-white text-2xl font-black text-center font-mono transition-colors">
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">時</span>
                         </div>
                         <span class="text-2xl font-black text-gray-400">:</span>
-                        <!-- 分 -->
+                        <!---->
                         <div class="flex-1 relative">
                             <input type="number" id="m-minute" required min="0" max="59" placeholder="00"
                                 class="w-full px-2 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-400 focus:bg-white text-2xl font-black text-center font-mono transition-colors">
                             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">分</span>
                         </div>
                         <span class="text-2xl font-black text-gray-400">:</span>
-                        <!-- 秒 -->
+                        <!---->
                         <div class="flex-1 relative">
                             <input type="number" id="m-second" required min="0" max="59" placeholder="00"
                                 class="w-full px-2 py-4 rounded-2xl bg-gray-50 border-2 border-gray-200 focus:outline-none focus:border-blue-400 focus:bg-white text-2xl font-black text-center font-mono transition-colors">

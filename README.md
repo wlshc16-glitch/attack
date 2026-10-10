@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -30,19 +29,6 @@
             -moz-appearance: textfield;
         }
 
-        /* 蘑菇完成時的紅框閃爍動畫 */
-        @keyframes alert-pulse {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
-            50% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); transform: scale(1.02); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
-        }
-
-        .mushroom-done {
-            animation: alert-pulse 1.5s infinite;
-            background-color: #fee2e2 !important; /* 淺紅色背景 */
-            border-color: #ef4444 !important; /* 紅色邊框 */
-        }
-        
         /* 童趣按鈕按下特效 */
         .btn-press {
             box-shadow: 0 6px 0px rgba(0,0,0,0.15);
@@ -51,6 +37,16 @@
         .btn-press:active:not(:disabled) {
             box-shadow: 0 0px 0px rgba(0,0,0,0.15);
             transform: translateY(6px);
+        }
+        
+        /* 精簡版清單的完成動畫 */
+        @keyframes subtle-pulse {
+            0% { background-color: #fee2e2; }
+            50% { background-color: #fca5a5; }
+            100% { background-color: #fee2e2; }
+        }
+        .row-done {
+            animation: subtle-pulse 2s infinite;
         }
     </style>
 </head>
@@ -80,7 +76,7 @@
         <section class="w-full lg:w-1/3 bg-white rounded-[2rem] shadow-xl p-6 md:p-8 border-t-8 border-yellow-400 flex-shrink-0 sticky top-6">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-black text-gray-700 flex items-center gap-2">
-                     ⏱️ 新增蘑菇
+                    ⏱️ 新增蘑菇
                 </h2>
                 <div id="counter-badge" class="bg-blue-100 text-blue-800 text-sm font-black px-4 py-1.5 rounded-full shadow-sm">
                     0 / 18
@@ -150,28 +146,36 @@
                 <!-- 提交按鈕 -->
                 <button type="submit" id="submit-btn" 
                     class="w-full bg-blue-500 hover:bg-blue-600 text-white font-black text-xl py-4 px-6 rounded-2xl btn-press disabled:opacity-50 disabled:cursor-not-allowed disabled:box-shadow-none disabled:transform-none">
-                    ➕ 新增至派兵清單
+                    ➕ 新增
                 </button>
             </form>
         </section>
 
         <!-- 右側：蘑菇清單區 -->
-        <section class="w-full lg:w-2/3 bg-white rounded-[2rem] shadow-xl p-6 md:p-8 border-t-8 border-red-500 min-h-[500px]">
-            <div class="flex justify-between items-center mb-6 border-b-2 border-gray-100 pb-4">
-                <h2 class="text-2xl font-black text-gray-700 flex items-center gap-2">
+        <section class="w-full lg:w-2/3 bg-white rounded-[2rem] shadow-xl p-4 md:p-6 border-t-8 border-red-500 min-h-[500px]">
+            <div class="flex justify-between items-center mb-4 border-b-2 border-gray-100 pb-4">
+                <h2 class="text-xl font-black text-gray-700 flex items-center gap-2">
                     📋 即將出現的蘑菇
                 </h2>
             </div>
             
             <!-- 空狀態提示 -->
-            <div id="empty-state" class="text-center py-16 flex flex-col items-center justify-center">
-                <span class="text-8xl mb-6 opacity-80 animate-bounce text-gray-300">💤</span>
-                <p class="text-gray-500 font-black text-2xl">目前沒有待打的蘑菇</p>
-                <p class="text-gray-400 font-bold mt-2">快從左邊輸入任務，派皮克敏出發吧！</p>
+            <div id="empty-state" class="text-center py-12 flex flex-col items-center justify-center">
+                <span class="text-6xl mb-4 opacity-80 animate-bounce text-gray-300">💤</span>
+                <p class="text-gray-500 font-black text-xl">目前沒有待打蘑菇</p>
+                <p class="text-gray-400 font-bold mt-2 text-sm">快從左邊輸入任務，派皮克敏出發吧！</p>
+            </div>
+
+            <!-- 清單標頭 (有資料時才顯示，由 JS 控制，這裡僅為排版預留概念) -->
+            <div id="list-header" class="hidden flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg mb-2 text-xs font-bold text-gray-500">
+                <div class="flex-1">地點名稱</div>
+                <div class="flex-1 text-center hidden md:block">設定時間</div>
+                <div class="flex-1 text-center">剩餘時間</div>
+                <div class="flex-1 text-right">操作</div>
             </div>
 
             <!-- 清單容器 -->
-            <ul id="mushroom-list" class="space-y-4">
+            <ul id="mushroom-list" class="space-y-1">
                 <!-- 列表項目將由 JavaScript 動態生成 -->
             </ul>
         </section>
@@ -192,9 +196,51 @@
         const submitBtn = document.getElementById('submit-btn');
         const errorMessage = document.getElementById('error-message');
         const counterBadge = document.getElementById('counter-badge');
+        const listHeader = document.getElementById('list-header');
         const mushroomList = document.getElementById('mushroom-list');
         const emptyState = document.getElementById('empty-state');
         const clockElement = document.getElementById('current-time');
+
+        // 音效引擎設定 (Web Audio API)
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+        
+        // 為了符合瀏覽器安全政策，需要使用者互動才能初始化音效
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
+
+        // 播放 10 秒提示音 (連續的電子嗶聲)
+        function playAlertSound() {
+            if (!audioCtx) return;
+            const durationSeconds = 10; // 播放長度 10 秒
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'square'; // 電子嗶聲風格
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 音高
+
+            // 預設音量為 0
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            
+            // 創造 10 次脈衝嗶聲 (每秒 1 次)
+            for (let i = 0; i < durationSeconds; i++) {
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + i); // 嗶
+                gainNode.gain.setTargetAtTime(0, audioCtx.currentTime + i + 0.1, 0.1); // 靜音
+            }
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + durationSeconds);
+        }
 
         // 主要時鐘更新函數
         function updateMainClock() {
@@ -247,12 +293,13 @@
                 // 計算最終目標時間戳
                 const targetTimestamp = calculateTargetTimestamp(h, m, s);
 
-                // 建立新的蘑菇物件
+                // 建立新的蘑菇物件，新增 alerted40 屬性來記錄是否響過鈴
                 const newMushroom = {
                     id: 'm_' + Date.now().toString() + Math.floor(Math.random()*100),
                     name: name,
                     targetTime: targetTimestamp,
-                    originalTimeStr: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+                    originalTimeStr: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+                    alerted40: false
                 };
                 
                 mushrooms.push(newMushroom);
@@ -303,41 +350,47 @@
             
             if (mushrooms.length === 0) {
                 emptyState.classList.remove('hidden');
+                listHeader.classList.add('hidden');
             } else {
                 emptyState.classList.add('hidden');
+                listHeader.classList.remove('hidden');
                 
-                // 皮克敏風格顏色陣列，隨機配給邊框顏色
-                const borderColors = ['border-red-400', 'border-yellow-400', 'border-blue-400', 'border-purple-400'];
+                // 皮克敏風格顏色陣列，用於小圖示點綴
+                const textColors = ['text-red-500', 'text-yellow-500', 'text-blue-500', 'text-purple-500'];
                 
                 mushrooms.forEach((mushroom, index) => {
                     const li = document.createElement('li');
                     li.id = `mushroom-${mushroom.id}`;
                     
-                    const borderColor = borderColors[index % borderColors.length];
+                    const iconColor = textColors[index % textColors.length];
                     
-                    li.className = `flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl border-l-[12px] bg-white shadow-sm transition-all duration-300 gap-4 ${borderColor} border-t-2 border-r-2 border-b-2 border-t-gray-100 border-r-gray-100 border-b-gray-100`;
+                    // 改用精簡的列表列 (List Row) 設計
+                    li.className = `flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 hover:bg-gray-50 transition-colors shadow-sm`;
                     
                     // 判斷是否為「明天」來顯示標籤
                     const targetDateObj = new Date(mushroom.targetTime);
                     const isTomorrow = targetDateObj.getDate() !== new Date().getDate();
-                    const dayLabel = isTomorrow ? '<span class="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md ml-2 font-black">明天</span>' : '';
+                    const dayLabel = isTomorrow ? '<span class="text-purple-600 text-[10px] ml-1 bg-purple-100 px-1 rounded font-black">明天</span>' : '';
 
                     li.innerHTML = `
-                        <div class="flex-1 w-full">
-                            <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <h3 class="font-black text-xl text-gray-800">🍄 ${mushroom.name}</h3>
-                            </div>
-                            <div class="text-sm font-bold text-gray-500 mb-1 flex items-center bg-gray-50 inline-block px-3 py-1 rounded-lg">
-                                🎯 設定時間: <span class="font-mono ml-2 text-gray-700">${mushroom.originalTimeStr}</span> ${dayLabel}
-                            </div>
-                            <div class="text-base font-black flex items-center gap-2 mt-2">
-                                ⏳ 剩餘: <span class="countdown-text font-mono text-xl text-blue-600 bg-blue-50 px-3 py-1 rounded-lg shadow-inner" data-target="${mushroom.targetTime}">計算中...</span>
-                            </div>
+                        <div class="flex-1 font-bold text-gray-800 text-base flex items-center gap-1 truncate">
+                            <span class="${iconColor} text-sm">🍄</span>
+                            <span class="truncate">${mushroom.name}</span>
                         </div>
-                        <button onclick="deleteMushroom('${mushroom.id}')" 
-                            class="w-full sm:w-auto bg-gray-100 hover:bg-red-500 hover:text-white text-gray-600 font-black py-3 px-6 rounded-xl transition-colors shrink-0 btn-press">
-                            完成 / 刪除
-                        </button>
+                        <div class="flex-1 text-center text-xs text-gray-400 font-mono hidden md:block">
+                            ${mushroom.originalTimeStr} ${dayLabel}
+                        </div>
+                        <div class="flex-1 text-center">
+                            <span class="countdown-text font-mono font-black text-blue-600 text-lg bg-blue-50 px-2 py-0.5 rounded shadow-inner" data-target="${mushroom.targetTime}" data-id="${mushroom.id}">
+                                --:--:--
+                            </span>
+                        </div>
+                        <div class="flex-1 text-right">
+                            <button onclick="deleteMushroom('${mushroom.id}')" 
+                                class="bg-gray-100 hover:bg-red-500 hover:text-white text-gray-600 font-bold text-xs py-1.5 px-3 rounded-lg transition-colors btn-press">
+                                完成/刪除
+                            </button>
+                        </div>
                     `;
                     mushroomList.appendChild(li);
                 });
@@ -357,24 +410,38 @@
         function updateCountdowns() {
             const countdownElements = document.querySelectorAll('.countdown-text');
             const now = new Date().getTime();
+            let needsSave = false;
 
             countdownElements.forEach(el => {
                 const targetTime = parseInt(el.getAttribute('data-target'));
+                const id = el.getAttribute('data-id');
                 const diff = targetTime - now;
                 const listItem = el.closest('li');
+                
+                // 找到對應的蘑菇資料，用於判斷是否要響鈴
+                const mushroom = mushrooms.find(m => m.id === id);
+                if (!mushroom) return;
 
                 if (diff <= 0) {
-                    // 時間到了，觸發完成動畫
-                    el.textContent = '✅ 可收成！';
-                    el.className = 'countdown-text font-black text-2xl text-red-600 tracking-wide';
+                    // 時間到了，觸發完成狀態 (精簡版)
+                    el.textContent = '✅ 已完成';
+                    el.className = 'countdown-text font-black text-sm text-red-600';
                     
-                    if (!listItem.classList.contains('mushroom-done')) {
-                        listItem.classList.add('mushroom-done');
-                        // 替換原本的邊框設定，確保醒目
-                        listItem.className = listItem.className.replace(/border-(red|yellow|blue|purple)-400/, '');
+                    if (!listItem.classList.contains('row-done')) {
+                        listItem.classList.add('row-done');
+                        listItem.classList.remove('hover:bg-gray-50');
                     }
                 } else {
                     // 尚未到期，計算剩餘時間
+                    const remainingSecondsTotal = Math.ceil(diff / 1000);
+                    
+                    // 【關鍵】倒數前 40 秒觸發提示音 (且僅觸發一次)
+                    if (remainingSecondsTotal === 40 && !mushroom.alerted40) {
+                        playAlertSound();
+                        mushroom.alerted40 = true;
+                        needsSave = true; // 需要將 alerted40 狀態存入 localStorage，避免重整後重複響鈴
+                    }
+
                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -383,6 +450,11 @@
                     el.textContent = timeText;
                 }
             });
+            
+            // 如果有更新響鈴狀態，存回 LocalStorage
+            if (needsSave) {
+                localStorage.setItem('pikminMushrooms_v3', JSON.stringify(mushrooms));
+            }
         }
 
         // 每秒執行一次倒數計時更新

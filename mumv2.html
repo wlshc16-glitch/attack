@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>皮克敏蘑菇計時器</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f8f1; margin: 0; padding: 20px; color: #333; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .clock { font-size: 2em; font-weight: bold; color: #2c7a3f; }
+        .container { display: flex; gap: 20px; max-width: 900px; margin: 0 auto; flex-wrap: wrap; }
+        .left-panel { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-top: 5px solid #ff7b7b; }
+        .right-panel { flex: 2; min-width: 300px; }
+        
+        h2 { margin-top: 0; font-size: 1.2em; color: #444; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        select, input[type="number"] { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; box-sizing: border-box; }
+        .time-inputs { display: flex; gap: 10px; }
+        .time-inputs > div { flex: 1; text-align: center; }
+        .time-inputs input { text-align: center; }
+        .time-label { font-size: 0.8em; color: #666; margin-top: 4px; }
+        
+        button { width: 100%; padding: 12px; background-color: #e54d4d; color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: all 0.1s; box-shadow: 0 4px 0 #b33939; }
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #b33939; }
+        button:disabled { background-color: #ccc; box-shadow: 0 4px 0 #999; cursor: not-allowed; }
+
+        .counter { font-size: 0.8em; color: #666; float: right; }
+        .warning { color: red; font-size: 0.8em; margin-top: 5px; display: none; }
+
+        /* 精簡清單樣式 */
+        .mushroom-list { display: flex; flex-direction: column; gap: 8px; }
+        .mushroom-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: white; padding: 10px 15px; border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid #2c7a3f;
+        }
+        .mushroom-item.color-0 { border-left-color: #ff5252; } 
+        .mushroom-item.color-1 { border-left-color: #ffd740; } 
+        .mushroom-item.color-2 { border-left-color: #448aff; } 
+        .mushroom-item.color-3 { border-left-color: #b041ff; } 
+
+        .mushroom-info { display: flex; align-items: center; gap: 12px; }
+        .mushroom-text { display: flex; flex-direction: column; gap: 4px; }
+        .mushroom-icon { display: flex; align-items: center; justify-content: center; }
+        
+        .mushroom-name { font-weight: bold; font-size: 1.1em; }
+        .target-time { font-size: 0.85em; color: #666; }
+        
+        .countdown-area { display: flex; align-items: center; gap: 15px; }
+        .countdown-text { font-size: 1.2em; font-weight: bold; font-family: monospace; background: #eee; padding: 4px 10px; border-radius: 6px; min-width: 90px; text-align: center;}
+        
+        .delete-btn { background: #ff4d4d; color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; box-shadow: none; font-size: 0.9em; width: auto;}
+        .delete-btn:active { transform: translateY(2px); box-shadow: none;}
+
+        .ready { 
+            background-color: #ffeaea; 
+            animation: pulse-border 1.5s infinite;
+        }
+        .ready .countdown-text { background: #ff4d4d; color: white; }
+
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 77, 77, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+        }
+        
+        @media (max-width: 600px) {
+            .container { flex-direction: column; }
+            .mushroom-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .countdown-area { width: 100%; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div id="currentClock" class="clock">00:00:00</div>
+    </div>
+
+    <div class="container">
+        <div class="left-panel">
+            <h2>新增蘑菇 <span id="counter" class="counter">0 / 18</span></h2>
+            
+            <div class="input-group">
+                <label>選擇蘑菇地點</label>
+                <select id="locationSelect">
+                    <option value="" disabled selected>請選擇地點...</option>
+                    <option value="迦光教會">迦光教會</option>
+                    <option value="泰味館">泰味館</option>
+                    <option value="愛買樹太老">愛買樹太</option>
+                    <option value="愛買香蕉">愛買香蕉</option>
+                    <option value="愛買水塔">愛買水塔</option>
+                    <option value="貓咪圍牆">貓咪圍牆</option>
+                    <option value="晉福宮">晉福宮</option>
+                    <option value="貓狗大戰">貓狗大戰</option>
+                    <option value="櫻花與維尼">櫻花與維尼</option>
+                    <option value="中洲籃球">中洲籃球</option>
+                    <option value="人面獅身">人面獅身</option>
+                    <option value="康橋社區">康橋社區</option>
+                    <option value="國際">國際</option>
+                    <option value="運動">運動</option>
+                    <option value="鐵軌福德">福德鐵軌</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>蘑菇剩餘時間 (系統將自動加 5 分鐘)</label>
+                <div class="time-inputs">
+                    <div>
+                        <input type="number" id="hourInput" min="0" max="999" placeholder="0" value="0">
+                        <div class="time-label">時</div>
+                    </div>
+                    <div>
+                        <input type="number" id="minuteInput" min="0" max="59" placeholder="0" value="0">
+                        <div class="time-label">分</div>
+                    </div>
+                    <div>
+                        <input type="number" id="secondInput" min="0" max="59" placeholder="0" value="0">
+                        <div class="time-label">秒</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="addBtn" onclick="addMushroom()">開始倒數</button>
+            <div id="limitWarning" class="warning">已達 18 筆上限！請先刪除部分項目。</div>
+        </div>
+
+        <div class="right-panel">
+            <div id="mushroomList" class="mushroom-list">
+                <!-- 清單由 JS 動態生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切換至 v4 儲存金鑰，避免舊版資料衝突
+        let mushrooms = JSON.parse(localStorage.getItem('pikminMushrooms_v4')) || [];
+        const MAX_ITEMS = 18;
+        
+        let audioCtx = null;
+        
+        // 點擊網頁任一處時初始化音效引擎 (瀏覽器安全限制，必須由使用者互動觸發)
+        document.body.addEventListener('click', () => {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }, { once: true });
+
+        // 播放連續 10 次的逼逼聲
+        function playBeep() {
+            if (!audioCtx) return;
+            let count = 0;
+            const interval = setInterval(() => {
+                if (count >= 10) {
+                    clearInterval(interval);
+                    return;
+                }
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.1);
+                
+                count++;
+            }, 1000);
+        }
+
+        // 防呆：失去焦點時自動檢查並補0
+        function enforceLimits(inputEl, maxVal) {
+            inputEl.addEventListener('blur', function() {
+                let val = parseInt(this.value);
+                if (isNaN(val) || val < 0) this.value = "0";
+                else if (val > maxVal) this.value = maxVal.toString();
+            });
+            inputEl.addEventListener('focus', function() {
+                if (this.value === "0") this.value = "";
+            });
+        }
+        enforceLimits(document.getElementById('hourInput'), 999);
+        enforceLimits(document.getElementById('minuteInput'), 59);
+        enforceLimits(document.getElementById('secondInput'), 59);
+
+        // 更新頂部時鐘
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentClock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+        }
+
+        // 點擊新增按鈕
+        function addMushroom() {
+            if (mushrooms.length >= MAX_ITEMS) return;
+
+            const location = document.getElementById('locationSelect').value;
+            const h = parseInt(document.getElementById('hourInput').value) || 0;
+            const m = parseInt(document.getElementById('minuteInput').value) || 0;
+            const s = parseInt(document.getElementById('secondInput').value) || 0;
+
+            if (!location) {
+                // 使用自訂義提示取代 alert()，但這裡依循需求以簡潔為主，使用原生 alert 的替代方案
+                // 因規定不可使用 alert()，我將此改為將警告顯示在畫面上，或是直接 return
+                const btn = document.getElementById('addBtn');
+                const origText = btn.innerText;
+                btn.innerText = "請選擇地點！";
+                btn.style.backgroundColor = "#ff9f1a";
+                setTimeout(() => { btn.innerText = origText; btn.style.backgroundColor = ""; }, 1500);
+                return;
+            }
+            if (h === 0 && m === 0 && s === 0) {
+                const btn = document.getElementById('addBtn');
+                const origText = btn.innerText;
+                btn.innerText = "請輸入倒數時間！";
+                btn.style.backgroundColor = "#ff9f1a";
+                setTimeout(() => { btn.innerText = origText; btn.style.backgroundColor = ""; }, 1500);
+                return;
+            }
+
+            // 將輸入的時分秒轉為毫秒，並加上 5 分鐘 (300,000毫秒) 的緩衝
+            const inputDurationMs = (h * 3600 + m * 60 + s) * 1000;
+            const extra5MinMs = 5 * 60 * 1000;
+            const targetTimestamp = Date.now() + inputDurationMs + extra5MinMs;
+
+            const newItem = {
+                id: Date.now(),
+                name: location,
+                targetTime: targetTimestamp,
+                hasRung40s: false
+            };
+
+            mushrooms.push(newItem);
+            saveAndRender();
+
+            // 成功後重置表單
+            document.getElementById('locationSelect').value = "";
+            document.getElementById('hourInput').value = "0";
+            document.getElementById('minuteInput').value = "0";
+            document.getElementById('secondInput').value = "0";
+        }
+
+        // 刪除按鈕
+        function deleteMushroom(id) {
+            mushrooms = mushrooms.filter(m => m.id !== id);
+            saveAndRender();
+        }
+
+        // 儲存至本機並渲染清單
+        function saveAndRender() {
+            // 依照目標時間由近到遠排序
+            mushrooms.sort((a, b) => a.targetTime - b.targetTime);
+            localStorage.setItem('pikminMushrooms_v4', JSON.stringify(mushrooms));
+            
+            const listEl = document.getElementById('mushroomList');
+            const btn = document.getElementById('addBtn');
+            const warning = document.getElementById('limitWarning');
+            const counter = document.getElementById('counter');
+            
+            counter.innerText = `${mushrooms.length} / ${MAX_ITEMS}`;
+            
+            if (mushrooms.length >= MAX_ITEMS) {
+                btn.disabled = true;
+                warning.style.display = 'block';
+            } else {
+                btn.disabled = false;
+                warning.style.display = 'none';
+            }
+
+            listEl.innerHTML = '';
+            
+            mushrooms.forEach((m, index) => {
+                const item = document.createElement('div');
+                item.className = `mushroom-item color-${index % 4}`;
+                item.id = `item-${m.id}`;
+                
+                const targetDate = new Date(m.targetTime);
+                const timeStr = targetDate.toLocaleTimeString('zh-TW', { hour12: false });
+                const isTomorrow = targetDate.getDate() !== new Date().getDate() ? "明天 " : "";
+
+                // 配合邊框顏色的蘑菇傘蓋
+                const capColors = ['#ff5252', '#ffd740', '#448aff', '#b041ff'];
+                const capColor = capColors[index % 4];
+
+                item.innerHTML = `
+                    <div class="mushroom-info">
+                        <div class="mushroom-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24">
+                                <!-- 蘑菇梗 -->
+                                <path d="M 9.5 12 v 9 c 0 1.5 5 1.5 5 0 v -9 z" fill="#f0d5b6" />
+                                <!-- 蘑菇傘蓋 -->
+                                <path d="M 2 13 C 2 3 22 3 22 13 Z" fill="${capColor}" />
+                                <!-- 傘蓋上的斑點 -->
+                                <circle cx="7" cy="9.5" r="1.8" fill="white" opacity="0.85"/>
+                                <circle cx="17" cy="9.5" r="2" fill="white" opacity="0.85"/>
+                                <circle cx="12" cy="5.5" r="2.5" fill="white" opacity="0.85"/>
+                            </svg>
+                        </div>
+                        <div class="mushroom-text">
+                            <div class="mushroom-name">${m.name}</div>
+                            <div class="target-time">預計完成: ${isTomorrow}${timeStr}</div>
+                        </div>
+                    </div>
+                    <div class="countdown-area">
+                        <div class="countdown-text" id="cd-${m.id}">--:--:--</div>
+                        <button class="delete-btn" onclick="deleteMushroom(${m.id})">刪除</button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+            
+            // 渲染後立即更新一次倒數文字
+            updateCountdowns();
+        }
+
+        // 計算倒數並更新畫面
+        function updateCountdowns() {
+            const now = Date.now();
+            let needsSave = false;
+
+            mushrooms.forEach(m => {
+                const el = document.getElementById(`cd-${m.id}`);
+                const itemEl = document.getElementById(`item-${m.id}`);
+                if (!el) return;
+
+                const diff = m.targetTime - now;
+
+                if (diff <= 0) {
+                    el.innerText = "✅ 可收成！";
+                    if (!itemEl.classList.contains('ready')) {
+                        itemEl.classList.add('ready');
+                    }
+                } else {
+                    // 倒數 40 秒時觸發 10 秒逼逼聲
+                    if (diff <= 40000 && diff > 39000 && !m.hasRung40s) {
+                        playBeep();
+                        m.hasRung40s = true;
+                        needsSave = true;
+                    }
+
+                    const totalSec = Math.floor(diff / 1000);
+                    const hours = Math.floor(totalSec / 3600);
+                    const mins = Math.floor((totalSec % 3600) / 60);
+                    const secs = totalSec % 60;
+                    
+                    el.innerText = 
+                        String(hours).padStart(2, '0') + ':' + 
+                        String(mins).padStart(2, '0') + ':' + 
+                        String(secs).padStart(2, '0');
+                }
+            });
+
+            if (needsSave) {
+                localStorage.setItem('pikminMushrooms_v4', JSON.stringify(mushrooms));
+            }
+        }
+
+        // 啟動計時器迴圈
+        setInterval(updateClock, 1000);
+        setInterval(updateCountdowns, 1000);
+        
+        // 初始化執行
+        updateClock();
+        saveAndRender();
+    </script>
+</body>
+</html>

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>皮克敏花朵計時器</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f4f7f6; 
+            margin: 0; 
+            padding: 20px; 
+            color: #333; 
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 20px; 
+        }
+        .clock { 
+            font-size: 2.5em; 
+            font-weight: bold; 
+            color: #2c7a3f; 
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1); 
+        }
+        .container { 
+            display: flex; 
+            gap: 20px; 
+            max-width: 950px; 
+            margin: 0 auto; 
+            flex-wrap: wrap; 
+        }
+
+        /* 左側輸入區 */
+        .left-panel { 
+            flex: 1; 
+            min-width: 300px; 
+            background: white; 
+            padding: 25px; 
+            border-radius: 16px; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06); 
+            height: fit-content; 
+            border-top: 6px solid #4caf50; 
+        }
+        .right-panel { 
+            flex: 2; 
+            min-width: 300px; 
+        }
+        h2 { 
+            margin-top: 0; 
+            font-size: 1.3em; 
+            color: #444; 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 10px;
+        }
+
+        .input-group { 
+            margin-bottom: 18px; 
+        }
+        .input-group label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+            font-size: 0.95em; 
+            color: #555; 
+        }
+        select, input[type="number"] { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px; 
+            font-size: 1em; 
+            box-sizing: border-box; 
+            transition: border-color 0.2s; 
+        }
+        select:focus, input[type="number"]:focus { 
+            border-color: #4caf50; 
+            outline: none; 
+        }
+
+        .time-inputs { 
+            display: flex; 
+            gap: 10px; 
+        }
+        .time-inputs > div { 
+            flex: 1; 
+            text-align: center; 
+        }
+        .time-inputs input { 
+            text-align: center; 
+            font-size: 1.2em; 
+            font-weight: bold;
+        }
+        .time-label { 
+            font-size: 0.85em; 
+            color: #777; 
+            margin-top: 6px; 
+        }
+
+        button#addBtn { 
+            width: 100%; 
+            padding: 14px; 
+            background-color: #4caf50; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 1.1em; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.1s; 
+            box-shadow: 0 4px 0 #388e3c; 
+        }
+        button#addBtn:active { 
+            transform: translateY(4px); 
+            box-shadow: 0 0 0 #388e3c; 
+        }
+        button#addBtn:disabled { 
+            background-color: #ccc; 
+            box-shadow: 0 4px 0 #999; 
+            cursor: not-allowed; 
+        }
+
+        /* 右側清單區 */
+        .mushroom-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+        }
+        .mushroom-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: white; 
+            padding: 15px 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.04); 
+            border-left: 6px solid #ccc; /* Default */
+            transition: all 0.3s ease; 
+            position: relative; 
+        }
+
+        /* 區域顏色設定 */
+        .zone-A { border-left-color: #ff5252; } 
+        .zone-B { border-left-color: #ffb300; } 
+        .zone-C { border-left-color: #448aff; } 
+
+        .mushroom-info { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+        }
+        .icon-container { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            width: 40px; 
+            height: 40px;
+        }
+        .icon-container svg { 
+            width: 100%; 
+            height: 100%; 
+        }
+
+        /* 區塊內圖示顏色 */
+        .zone-A .icon-container { color: #ff5252; }
+        .zone-B .icon-container { color: #ffb300; }
+        .zone-C .icon-container { color: #448aff; }
+
+        .mushroom-text { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
+        .mushroom-name { 
+            font-weight: bold; 
+            font-size: 1.2em; 
+            color: #222;
+        }
+        .target-time { 
+            font-size: 0.85em; 
+            color: #777; 
+        }
+
+        .countdown-area { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-end; 
+            gap: 5px; 
+        }
+        .countdown-row { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+        }
+
+        /* 倒數計時文字框 (未開花狀態) */
+        .countdown-text { 
+            font-size: 1.3em; 
+            font-weight: bold; 
+            font-family: monospace; 
+            background: #fff; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            min-width: 105px; 
+            text-align: center; 
+            border: 2px solid #ccc; 
+        }
+
+        /* 針對各區的倒數框顏色 */
+        .zone-A .countdown-text { border-color: #ff5252; color: #ff5252; }
+        .zone-B .countdown-text { border-color: #ffb300; color: #d69600; }
+        .zone-C .countdown-text { border-color: #448aff; color: #448aff; }
+
+        .delete-btn { 
+            background: #ff4d4d; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            padding: 8px 12px; 
+            cursor: pointer; 
+            font-size: 0.9em; 
+            transition: background 0.2s;
+        }
+        .delete-btn:hover { 
+            background: #e60000; 
+        }
+        .secondary-time { 
+            font-size: 0.8em; 
+            color: #ff4081; 
+            font-weight: bold; 
+            display: none; 
+        }
+
+        /* 開花狀態 (Phase 2) */
+        .blooming { 
+            background-color: #fff0f5; 
+            border-left-color: #ff4081; 
+        }
+        .blooming .icon-container { 
+            color: #ff4081; 
+            animation: bounce 2s infinite; 
+        }
+        .blooming .countdown-text { 
+            background: #ff4081; 
+            color: white !important; 
+            border-color: #ff4081 !important; 
+            font-size: 1.1em; 
+            padding: 8px 12px; 
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @media (max-width: 650px) {
+            .container { flex-direction: column; }
+            .mushroom-item { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .countdown-area { width: 100%; align-items: flex-start; }
+            .countdown-row { width: 100%; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div id="currentClock" class="clock">00:00:00</div>
+    </div>
+
+    <div class="container">
+        <!-- 左側：輸入表單 -->
+        <div class="left-panel">
+            <h2>巨大花朵</h2>
+            
+            <div class="input-group">
+                <label>選擇地點 (分區)</label>
+                <select id="locationSelect">
+                    <option value="" disabled selected>請選擇地點...</option>
+                    <optgroup label="國泰社區">
+                        <option value="A|海德堡樹">海德堡樹</option>
+                        <option value="A|霖園公園">霖園公園</option>
+                        <option value="A|社區單槓">社區單槓</option>
+                        <option value="A|社區壁畫">社區壁畫</option>
+                        <option value="A|異形之卵">異形之卵</option>
+                        <option value="A|小風車">小風車</option>
+                        <option value="A|愛買教會">愛買教會</option>
+                        <option value="A|愛買版畫">愛買版畫</option>
+                        <option value="A|國際告示牌">國際告示牌</option>
+                        <option value="A|國際社區">國際社區</option>
+                    </optgroup>
+                    <optgroup label="中平路">
+                        <option value="B|仁愛菇">仁愛菇</option>
+                        <option value="B|圖書館">圖書館</option>
+                        <option value="B|親子公園">親子公園</option>
+                        <option value="B|市三廣場">市三廣場</option>
+                        <option value="B|教會">教會</option>
+                        <option value="B|游泳池">游泳池</option>
+                        <option value="B|金獅子">金獅子</option>
+                        <option value="B|郵局">郵局</option>
+                        <option value="B|公佈欄">公佈欄</option>
+                        <option value="B|丘稻">丘稻</option>
+                        <option value="B|蝴蝶魚">蝴蝶魚</option>
+                    </optgroup>
+                    <optgroup label="IKEA">
+                        <option value="C|我愛耶穌">我愛耶穌</option>
+                        <option value="C|熊">熊</option>
+                        <option value="C|熊2">熊2</option>
+                        <option value="C|溜滑梯">溜滑梯</option>
+                        <option value="C|寶祥縣寶">寶祥縣寶</option>
+                        <option value="C|海豚">海豚</option>
+                        <option value="C|LOVE">LOVE</option>
+                        <option value="C|大樹藥局">大樹藥局</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>巨大花朵倒數時間</label>
+                <div class="time-inputs">
+                    <div>
+                        <input type="number" id="hourInput" min="0" max="999" placeholder="0" value="0">
+                        <div class="time-label">小時</div>
+                    </div>
+                    <div>
+                        <input type="number" id="minuteInput" min="0" max="59" placeholder="0" value="0">
+                        <div class="time-label">分鐘</div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="addBtn" onclick="addMushroom()">開始倒數</button>
+        </div>
+
+        <!-- 右側：清單 -->
+        <div class="right-panel">
+            <div id="mushroomList" class="mushroom-list">
+                <!-- 動態生成項目 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 使用 v4 金鑰進行獨立儲存
+        const STORAGE_KEY = 'pikminFlowerTimer_v4';
+        let mushrooms = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+        // 蘑菇的 SVG 圖案 (顏色會透過 CSS 的 currentColor 自動適應區域)
+        const getMushroomSVG = () => `
+            <svg viewBox="0 0 24 24">
+                <!-- 蘑菇梗 -->
+                <path d="M 9.5 12 v 9 c 0 1.5 5 1.5 5 0 v -9 z" fill="#e0cda7" />
+                <!-- 蘑菇傘蓋 -->
+                <path d="M 2 13 C 2 2 22 2 22 13 Z" fill="currentColor" />
+                <!-- 斑點 -->
+                <circle cx="7" cy="9" r="2" fill="white" opacity="0.9"/>
+                <circle cx="17" cy="9" r="2.2" fill="white" opacity="0.9"/>
+                <circle cx="12" cy="5" r="2.5" fill="white" opacity="0.9"/>
+            </svg>
+        `;
+
+        // 綻放花朵的 SVG 圖案 (固定粉紅色系)
+        const getFlowerSVG = () => `
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="6" r="4.5" fill="#ff80ab" />
+                <circle cx="18" cy="10" r="4.5" fill="#ff80ab" />
+                <circle cx="16" cy="17" r="4.5" fill="#ff80ab" />
+                <circle cx="8" cy="17" r="4.5" fill="#ff80ab" />
+                <circle cx="6" cy="10" r="4.5" fill="#ff80ab" />
+                <circle cx="12" cy="12" r="5" fill="#ffeb3b" />
+            </svg>
+        `;
+
+        // 處理輸入框防呆機制
+        function enforceLimits(inputEl, maxVal) {
+            inputEl.addEventListener('blur', function() {
+                let val = parseInt(this.value);
+                if (isNaN(val) || val < 0) this.value = "0";
+                else if (val > maxVal) this.value = maxVal.toString();
+            });
+            inputEl.addEventListener('focus', function() {
+                if (this.value === "0") this.value = "";
+            });
+        }
+        enforceLimits(document.getElementById('hourInput'), 999);
+        enforceLimits(document.getElementById('minuteInput'), 59);
+
+        // 頂端即時時鐘
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentClock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+        }
+
+        // 新增按鈕邏輯
+        function addMushroom() {
+            const selectEl = document.getElementById('locationSelect');
+            const selectVal = selectEl.value;
+            const h = parseInt(document.getElementById('hourInput').value) || 0;
+            const m = parseInt(document.getElementById('minuteInput').value) || 0;
+
+            if (!selectVal) {
+                showButtonWarning("請選擇地點！");
+                return;
+            }
+            if (h === 0 && m === 0) {
+                showButtonWarning("請輸入時間！");
+                return;
+            }
+
+            let [zone, name] = selectVal.split('|');
+            // 若未直接取得 name，則自動由選單 option 文字取得地點名稱，確保不為空
+            if (!name) {
+                name = selectEl.options[selectEl.selectedIndex].text;
+            }
+
+            // 計算目標時間 (目前時間 + 輸入的分秒總毫秒數)
+            const inputDurationMs = (h * 3600 + m * 60) * 1000;
+            const targetTimestamp = Date.now() + inputDurationMs;
+
+            const newItem = {
+                id: Date.now(),
+                name: name,
+                zone: zone,
+                targetTime: targetTimestamp,
+                phase: 0 // 用來追蹤畫面上當前的狀態
+            };
+
+            mushrooms.push(newItem);
+            saveAndRender();
+
+            // 重置表單
+            document.getElementById('locationSelect').value = "";
+            document.getElementById('hourInput').value = "0";
+            document.getElementById('minuteInput').value = "0";
+        }
+
+        function showButtonWarning(text) {
+            const btn = document.getElementById('addBtn');
+            const origText = btn.innerText;
+            btn.innerText = text;
+            btn.style.backgroundColor = "#ff9800";
+            setTimeout(() => { 
+                btn.innerText = origText; 
+                btn.style.backgroundColor = ""; 
+            }, 1500);
+        }
+
+        // 刪除指定項目
+        function deleteMushroom(id) {
+            mushrooms = mushrooms.filter(m => m.id !== id);
+            saveAndRender();
+        }
+
+        // 排序、儲存、並重新繪製清單框架
+        function saveAndRender() {
+            mushrooms.sort((a, b) => a.targetTime - b.targetTime);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(mushrooms));
+            
+            const listEl = document.getElementById('mushroomList');
+            listEl.innerHTML = '';
+            
+            mushrooms.forEach((m) => {
+                const item = document.createElement('div');
+                item.className = `mushroom-item zone-${m.zone}`;
+                item.id = `item-${m.id}`;
+                
+                const targetDate = new Date(m.targetTime);
+                const timeStr = targetDate.toLocaleTimeString('zh-TW', { hour12: false });
+                const isTomorrow = targetDate.getDate() !== new Date().getDate() ? "明天 " : "";
+
+                item.innerHTML = `
+                    <div class="mushroom-info">
+                        <div class="icon-container" id="icon-${m.id}">
+                            <!-- SVG 會由 updateCountdowns 根據狀態填入 -->
+                        </div>
+                        <div class="mushroom-text">
+                            <div class="mushroom-name">${m.name}</div>
+                            <div class="target-time">預計完成: ${isTomorrow}${timeStr}</div>
+                        </div>
+                    </div>
+                    <div class="countdown-area">
+                        <div class="countdown-row">
+                            <div class="countdown-text" id="cd-${m.id}">--:--:--</div>
+                            <button class="delete-btn" onclick="deleteMushroom(${m.id})">刪除</button>
+                        </div>
+                        <div class="secondary-time" id="secondary-${m.id}"></div>
+                    </div>
+                `;
+                listEl.appendChild(item);
+                m.phase = 0; // 強制初始化狀態
+            });
+            
+            updateCountdowns();
+        }
+
+        // 每秒執行：更新時間與狀態切換
+        function updateCountdowns() {
+            const now = Date.now();
+            let needsSaveAndRender = false;
+
+            mushrooms.forEach(m => {
+                const diff = m.targetTime - now;
+                const itemEl = document.getElementById(`item-${m.id}`);
+                const cdText = document.getElementById(`cd-${m.id}`);
+                const secondaryText = document.getElementById(`secondary-${m.id}`);
+                const iconContainer = document.getElementById(`icon-${m.id}`);
+
+                if (!itemEl) return;
+
+                // 【階段 3：超過一小時，自動刪除】
+                if (diff <= -3600000) { 
+                    m.expired = true;
+                    needsSaveAndRender = true;
+                } 
+                // 【階段 2：時間到，開花狀態維持一小時】
+                else if (diff <= 0) {
+                    if (m.phase !== 2) {
+                        m.phase = 2; // 更新狀態避免重複渲染
+                        itemEl.classList.add('blooming');
+                        iconContainer.innerHTML = getFlowerSVG();
+                        cdText.innerText = "🌸 綻放中！";
+                        secondaryText.style.display = 'block';
+                    }
+                    
+                    // 計算花朵剩下的壽命 (從 1 小時開始倒扣)
+                    const flowerRemainingMs = 3600000 + diff; // 因為 diff 是負數
+                    const fMins = Math.floor(flowerRemainingMs / 60000);
+                    const fSecs = Math.floor((flowerRemainingMs % 60000) / 1000);
+                    secondaryText.innerText = `將於 ${String(fMins).padStart(2, '0')}:${String(fSecs).padStart(2, '0')} 後消失`;
+                } 
+                // 【階段 1：正常倒數中】
+                else {
+                    if (m.phase !== 1) {
+                        m.phase = 1;
+                        itemEl.classList.remove('blooming');
+                        iconContainer.innerHTML = getMushroomSVG();
+                        secondaryText.style.display = 'none';
+                    }
+                    
+                    // 格式化 HH:MM:SS
+                    const totalSec = Math.floor(diff / 1000);
+                    const hours = Math.floor(totalSec / 3600);
+                    const mins = Math.floor((totalSec % 3600) / 60);
+                    const secs = totalSec % 60;
+                    
+                    cdText.innerText = 
+                        String(hours).padStart(2, '0') + ':' + 
+                        String(mins).padStart(2, '0') + ':' + 
+                        String(secs).padStart(2, '0');
+                }
+            });
+
+            // 如果有過期的花朵，執行清理並重新繪製畫面
+            if (needsSaveAndRender) {
+                mushrooms = mushrooms.filter(m => !m.expired);
+                saveAndRender();
+            }
+        }
+
+        // 啟動迴圈
+        setInterval(updateClock, 1000);
+        setInterval(updateCountdowns, 1000);
+        updateClock();
+        saveAndRender();
+    </script>
+</body>
+</html>
